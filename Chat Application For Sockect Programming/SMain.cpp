@@ -29,7 +29,7 @@ int clientCount = 0;
 struct Client clients[CLIENTSSIZE];
 HANDLE threads[CLIENTSSIZE];
 
-string CreateMessageToReviever(string& message, Client& sender, Client& reciever);
+string CreateMessageToReviever(string& message, Client& sender, int clientId);
 string ListAllClients(Client& currentClient);
 DWORD WINAPI HandleRequest(LPVOID param);
 void InitializeWSA();
@@ -39,7 +39,7 @@ void Listen(SOCKET& sock);
 
 int main()
 {
-    cout << "This Consile Is Server" << endl << endl;
+    cout << "This Console Is Server" << endl << endl;
 
     SOCKET sock = SOCKET_ERROR;
    
@@ -52,7 +52,7 @@ int main()
 
         while (1) {
 
-            SOCKET newClientSocket = accept(sock, NULL, NULL); //(sockaddr*)&clients[clientCount].clientAddr, &clients[clientCount].len);
+            SOCKET newClientSocket = accept(sock, NULL, NULL);
 
             if (newClientSocket == SOCKET_ERROR)
                 throw new exception("Failed To Accept Request");
@@ -124,10 +124,11 @@ DWORD WINAPI HandleRequest(LPVOID param)
             int clientIdStringSize = (input.size() - senderMessage.size() - 1);
             int clientId = stoi(input.substr(0, clientIdStringSize));
 
-            Client reciever = clients[clientId];
-            string recieverMessage = CreateMessageToReviever(senderMessage, client, reciever);
+            string recieverMessage = CreateMessageToReviever(senderMessage, client, clientId);
 
+            Client reciever = clients[clientId];
             int sendToSocket;
+
             if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
                 sendToSocket = client.sockID;
             else
@@ -148,8 +149,7 @@ DWORD WINAPI HandleRequest(LPVOID param)
                 string message = '\n' + clientName + " teminated his connection";
                 send(reciever.sockID, message.data(), message.size(), 0);
             }
-
-            closesocket(client.sockID);
+            //closesocket(client.sockID);
         }
     }
 
@@ -159,7 +159,7 @@ DWORD WINAPI HandleRequest(LPVOID param)
 }
 
 string ListAllClients(Client& currentClient) {
-    string result = "\n\nClients Are: \n";
+    string result = "\n\nYour Clients Are: \n";
 
     int notReadyClients = 0;
 
@@ -175,18 +175,23 @@ string ListAllClients(Client& currentClient) {
     }
     
     if (notReadyClients == CLIENTSSIZE)
-        result = "\n\n There isn't Available Clients \n";
+        result = "\n\n There are not Available Clients \n";
 
     return result;
 }
 
-string CreateMessageToReviever(string& message,Client& sender, Client& reciever) {
+string CreateMessageToReviever(string& message,Client& sender,int clientId) {
  
+    string badRes = '\n' + "This Client Is not Avaiable Now";
+
+    if (clientId >= CLIENTSSIZE)
+        return badRes;
+
+    Client reciever = clients[clientId];
     if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
-        return '\n' + "This Client Isn't Avaiable Now";
+        return badRes;
 
     string nameOfSender(sender.name);
-
     return '\n' + nameOfSender + ": " + message;
 }
 

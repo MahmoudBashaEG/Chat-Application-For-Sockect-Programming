@@ -4,7 +4,6 @@
 #include <string>
 using namespace std;
 
-
 #define BUFFERSIZE 1024
 
 const string InitializeClientName = "100";
@@ -28,7 +27,7 @@ int main()
 
     try
     {
-        cout << "This Consile Is Client" << endl << endl;
+        cout << "This Console Is Client" << endl << endl;
         InitializeWSA();
         sock = CreateSocket();
         Connect(sock);
@@ -37,6 +36,8 @@ int main()
         HANDLE t = CreateThread(NULL, 0, RecieveData, (LPVOID)&sock, 0, &threadId);
 
         SendData(sock);
+
+        system("pause");
 
         closesocket(sock);
         WSACleanup();
@@ -114,10 +115,10 @@ void SendData(SOCKET& sock) {
     message = ListCLients;
     send(sock, message.data(), message.size(), 0);
 
-    Sleep(1000);
 
     while (1) {
 
+        Sleep(1000);
         cout << "Write Your Message:";
         getline(std::cin, input);
 
