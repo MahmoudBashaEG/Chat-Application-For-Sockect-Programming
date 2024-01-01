@@ -29,7 +29,7 @@ int clientCount = 0;
 struct Client clients[CLIENTSSIZE];
 HANDLE threads[CLIENTSSIZE];
 
-string SendMessageToReviever(string& message, Client& sender, Client& reciever);
+string CreateMessageToReviever(string& message, Client& sender, Client& reciever);
 string ListAllClients(Client& currentClient);
 DWORD WINAPI HandleRequest(LPVOID param);
 void InitializeWSA();
@@ -39,6 +39,7 @@ void Listen(SOCKET& sock);
 
 int main()
 {
+    cout << "This Consile Is Server" << endl << endl;
 
     SOCKET sock = SOCKET_ERROR;
    
@@ -114,18 +115,17 @@ DWORD WINAPI HandleRequest(LPVOID param)
         else if (action == SendMess) {
 
             int firstSeperatorIndex = input.find_first_of('|');
-            int lastSeperatorIndex = input.find_last_of('|');
+            input = input.substr(firstSeperatorIndex + 1);
 
-            cout << "Client Name is: " << client.name << endl;
+            int lastSeperatorIndex = input.find_first_of(' ');
 
+            string senderMessage = input.substr(lastSeperatorIndex + 1);
 
-            string message = input.substr(lastSeperatorIndex + 1);
-
-            int clientIdStringSize = (input.size() - message.size() - 3);
-            int clientId = stoi(input.substr(firstSeperatorIndex, clientIdStringSize));
+            int clientIdStringSize = (input.size() - senderMessage.size() - 1);
+            int clientId = stoi(input.substr(0, clientIdStringSize));
 
             Client reciever = clients[clientId];
-            string res = SendMessageToReviever(message, client, reciever);
+            string recieverMessage = CreateMessageToReviever(senderMessage, client, reciever);
 
             int sendToSocket;
             if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
@@ -133,7 +133,7 @@ DWORD WINAPI HandleRequest(LPVOID param)
             else
                 sendToSocket = reciever.sockID;
 
-            send(sendToSocket, res.data(), res.size(), 0);
+            send(sendToSocket, recieverMessage.data(), recieverMessage.size(), 0);
         }
         else if (action == EndConnection) {
             client.isConnectionClosed = true;
@@ -145,7 +145,7 @@ DWORD WINAPI HandleRequest(LPVOID param)
                     continue;
 
                 string clientName(client.name);
-                string message = clientName + " teminated his connection";
+                string message = '\n' + clientName + " teminated his connection";
                 send(reciever.sockID, message.data(), message.size(), 0);
             }
 
@@ -159,7 +159,7 @@ DWORD WINAPI HandleRequest(LPVOID param)
 }
 
 string ListAllClients(Client& currentClient) {
-    string result = "Clients Are: \n";
+    string result = "\n\nClients Are: \n";
 
     int notReadyClients = 0;
 
@@ -175,20 +175,19 @@ string ListAllClients(Client& currentClient) {
     }
     
     if (notReadyClients == CLIENTSSIZE)
-        result = "There isn't Available Clients \n";
+        result = "\n\n There isn't Available Clients \n";
 
     return result;
 }
 
-string SendMessageToReviever(string& message,Client& sender, Client& reciever) {
+string CreateMessageToReviever(string& message,Client& sender, Client& reciever) {
  
     if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
-        return "This Client Isn't Avaiable Now";
+        return '\n' + "This Client Isn't Avaiable Now";
 
     string nameOfSender(sender.name);
 
-    return nameOfSender + ": " + message;
-
+    return '\n' + nameOfSender + ": " + message;
 }
 
 void InitializeWSA() {
@@ -200,7 +199,6 @@ void InitializeWSA() {
         throw new exception("Failed to Initialize WSA !\n");
 
     cout << "WSA is initialized" << endl;
-
 }
 
 SOCKET& CreateSocket() {
