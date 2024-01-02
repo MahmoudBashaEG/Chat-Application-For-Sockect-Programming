@@ -8,11 +8,11 @@ using namespace std;
 #define CLIENTSSIZE 10
 #define BUFFERSIZE 1024
 
-
 const string InitializeClientName = "100";
-const string ListCLients = "101";
-const string SendMess = "102";
-const string EndConnection = "103";
+const string SendMess = "101";
+const string EndConnection = "102";
+const string NewClient = "103";
+
 
 struct Client {
 
@@ -29,7 +29,9 @@ int clientCount = 0;
 struct Client clients[CLIENTSSIZE];
 HANDLE threads[CLIENTSSIZE];
 
-string CreateMessageToReviever(string& message, Client& sender, int clientId);
+void RefreshListOfClientsToClients(Client& client);
+void NotifyAllClientsAboutConnections(Client& client, bool isNewClient);
+string CreateMessageToReviever(string& message, Client& sender, int clientId, string& badRes);
 string ListAllClients(Client& currentClient);
 DWORD WINAPI HandleRequest(LPVOID param);
 void InitializeWSA();
@@ -57,7 +59,7 @@ int main()
             if (newClientSocket == SOCKET_ERROR)
                 throw new exception("Failed To Accept Request");
 
-            cout << "Socket Accpeted One Client" << endl;
+            cout << "Socket Accpeted a Client" << endl;
 
             clients[clientCount].sockID = newClientSocket;
             clients[clientCount].index = clientCount;
@@ -95,7 +97,6 @@ DWORD WINAPI HandleRequest(LPVOID param)
     char clientBuffer[BUFFERSIZE];
 
     while (1) {
-
         int readBytesCount = recv(client.sockID, clientBuffer, BUFFERSIZE, 0);
         clientBuffer[readBytesCount] = '\0';
         string input(clientBuffer);
@@ -105,51 +106,44 @@ DWORD WINAPI HandleRequest(LPVOID param)
         if (action == InitializeClientName) {
             string data = input.substr(4);
             strcpy_s(client.name, data.data());
-
-            cout << client.name << endl;
-        }
-        else if (action == ListCLients) {
-            string res = ListAllClients(client);
-            send(client.sockID, res.data(), res.size(), 0);
         }
         else if (action == SendMess) {
 
             int firstSeperatorIndex = input.find_first_of('|');
             input = input.substr(firstSeperatorIndex + 1);
 
-            int lastSeperatorIndex = input.find_first_of(' ');
-
-            string senderMessage = input.substr(lastSeperatorIndex + 1);
+            int firstSpaceIndex = input.find_first_of(' ');
+            string senderMessage = input.substr(firstSpaceIndex + 1);
 
             int clientIdStringSize = (input.size() - senderMessage.size() - 1);
             int clientId = stoi(input.substr(0, clientIdStringSize));
 
-            string recieverMessage = CreateMessageToReviever(senderMessage, client, clientId);
-
-            Client reciever = clients[clientId];
             int sendToSocket;
+            string result = "\nThis Client Is not Avaiable Now";
 
-            if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
+            if (clientId >= CLIENTSSIZE) {
                 sendToSocket = client.sockID;
-            else
-                sendToSocket = reciever.sockID;
+            }
+            else {
+                result = CreateMessageToReviever(senderMessage, client, clientId, result);
 
-            send(sendToSocket, recieverMessage.data(), recieverMessage.size(), 0);
+                Client reciever = clients[clientId];
+                if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
+                    sendToSocket = client.sockID;
+                else
+                    sendToSocket = reciever.sockID;
+            }        
+            send(sendToSocket, result.data(), result.size(), 0);
         }
         else if (action == EndConnection) {
+            NotifyAllClientsAboutConnections(client, false);
             client.isConnectionClosed = true;
-
-            for (int i = 0; i < CLIENTSSIZE; i++)
-            {
-                Client reciever = clients[i];
-                if (reciever.isConnectionClosed || reciever.index == client.index)
-                    continue;
-
-                string clientName(client.name);
-                string message = '\n' + clientName + " teminated his connection";
-                send(reciever.sockID, message.data(), message.size(), 0);
-            }
+            RefreshListOfClientsToClients(client);
             //closesocket(client.sockID);
+        }
+        else if (action == NewClient) {
+            NotifyAllClientsAboutConnections(client, true);
+            RefreshListOfClientsToClients(client);
         }
     }
 
@@ -159,7 +153,7 @@ DWORD WINAPI HandleRequest(LPVOID param)
 }
 
 string ListAllClients(Client& currentClient) {
-    string result = "\n\nYour Clients Are: \n";
+    string result = "\nAvailable Clients Are:\n";
 
     int notReadyClients = 0;
 
@@ -175,21 +169,19 @@ string ListAllClients(Client& currentClient) {
     }
     
     if (notReadyClients == CLIENTSSIZE)
-        result = "\n\n There are not Available Clients \n";
+        result = "\n\nThere are not Available Clients \n";
 
     return result;
 }
 
-string CreateMessageToReviever(string& message,Client& sender,int clientId) {
- 
-    string badRes = '\n' + "This Client Is not Avaiable Now";
-
-    if (clientId >= CLIENTSSIZE)
-        return badRes;
-
+string CreateMessageToReviever(string& message,Client& sender,int clientId,string& badRes) {
     Client reciever = clients[clientId];
+
     if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
         return badRes;
+
+    if (reciever.index == sender.index)
+        return "\nYou Can Not Message Yourself";
 
     string nameOfSender(sender.name);
     return '\n' + nameOfSender + ": " + message;
@@ -241,3 +233,33 @@ void Listen(SOCKET& sock) {
     cout << "Socket is listening" << endl;
 }
 
+void NotifyAllClientsAboutConnections(Client& client,bool isNewClient) {
+    for (int i = 0; i < CLIENTSSIZE; i++)
+    {
+        Client reciever = clients[i];
+        if (reciever.isConnectionClosed || reciever.index == client.index)
+            continue;
+
+        string clientName(client.name);
+        string message = '\n' + clientName;
+
+        if (isNewClient)
+            message += " Connected To The System";
+        else {
+            message += " teminated his connection";
+        }
+
+        send(reciever.sockID, message.data(), message.size(), 0);
+    }
+}
+void RefreshListOfClientsToClients(Client& client) {
+    for (int i = 0; i < CLIENTSSIZE; i++)
+    {
+        Client reciever = clients[i];
+        if (reciever.isConnectionClosed)
+            continue;
+
+        string message = ListAllClients(reciever); 
+        send(reciever.sockID, message.data(), message.size(), 0);
+    }
+}
