@@ -237,7 +237,7 @@ void NotifyAllClientsAboutConnections(Client& client,bool isNewClient) {
     for (int i = 0; i < CLIENTSSIZE; i++)
     {
         Client reciever = clients[i];
-        if (reciever.isConnectionClosed || reciever.index == client.index)
+        if (reciever.isConnectionClosed || reciever.index == client.index || strlen(reciever.name) == 0)
             continue;
 
         string clientName(client.name);
@@ -256,7 +256,7 @@ void RefreshListOfClientsToClients(Client& client) {
     for (int i = 0; i < CLIENTSSIZE; i++)
     {
         Client reciever = clients[i];
-        if (reciever.isConnectionClosed)
+        if (reciever.isConnectionClosed || strlen(reciever.name) == 0)
             continue;
 
         string message = ListAllClients(reciever); 
