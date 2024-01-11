@@ -18,6 +18,38 @@ void Connect(SOCKET& sock);
 void SendData(SOCKET& sock);
 DWORD RecieveData(LPVOID sockPr);
 
+unsigned char CRC8Table[256];
+
+void generateCRC8Table()
+{
+    for (int i = 0; i < 256; i++)
+    {
+        unsigned char crc = i;
+        for (int j = 0; j < 8; j++)
+        {
+            crc = (crc << 1) ^ ((crc & 0x80) ? 0x07 : 0);
+        }
+        CRC8Table[i] = crc;
+    }
+}
+unsigned char calculateCRC8(string str)
+{
+    unsigned char crc = 0;
+    for (size_t i = 0; i < str.size(); i++)
+    {
+        crc = CRC8Table[crc ^ str[i]];
+    }
+    return crc;
+}
+unsigned char calculateChecksum(string str)
+{
+    unsigned char checksum = 0;
+    for (size_t i = 0; i < str.size(); i++)
+    {
+        checksum ^= str[i];
+    }
+    return checksum;
+}
 
 
 int main()
