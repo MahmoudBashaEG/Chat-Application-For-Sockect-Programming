@@ -214,7 +214,7 @@ void BindSocket(SOCKET& sock) {
 
     sockaddr_in bindingData;
     bindingData.sin_family = AF_INET;
-    bindingData.sin_port = htons(55555);
+    bindingData.sin_port = htons(60000);
 
     inet_pton(AF_INET, "127.0.0.1", &bindingData.sin_addr);
 

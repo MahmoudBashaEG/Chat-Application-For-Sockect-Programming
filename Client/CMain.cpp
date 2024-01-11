@@ -5,6 +5,8 @@
 using namespace std;
 
 #define BUFFERSIZE 1024
+unsigned char CRC8Table[256];
+
 
 const string InitializeClientName = "100";
 const string SendMess = "101";
@@ -17,8 +19,6 @@ SOCKET& CreateSocket();
 void Connect(SOCKET& sock);
 void SendData(SOCKET& sock);
 DWORD RecieveData(LPVOID sockPr);
-
-unsigned char CRC8Table[256];
 
 void generateCRC8Table()
 {
@@ -117,7 +117,7 @@ void Connect(SOCKET& sock) {
 
     sockaddr_in bindingData;
     bindingData.sin_family = AF_INET;
-    bindingData.sin_port = htons(55555);
+    bindingData.sin_port = htons(60000);
 
     inet_pton(AF_INET, "127.0.0.1", &bindingData.sin_addr);
 
